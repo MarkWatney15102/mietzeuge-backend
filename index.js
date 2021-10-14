@@ -38,7 +38,7 @@ function getOneArticel(artId) {
      "FROM articel art " +
      "INNER JOIN articel_images artImg ON art.ID = artImg.articel_id " +
      "INNER JOIN articel_prices artPrice ON art.ID = artPrice.articel_id " +
-     "INNER JOIN cat_categories cat ON art.category_id = cat.id "
+     "INNER JOIN cat_categories cat ON art.category_id = cat.id " +
      "WHERE art.ID = '" + artId + "'";
     return querySql(articelQuery)
        .then(function(rows){

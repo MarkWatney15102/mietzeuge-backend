@@ -1,9 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 
-var db = require('./lib/db');
-var getSqlConnection = db.getSqlConnection;
-var querySql = db.querySql;
+let db = require('./lib/db');
+let getSqlConnection = db.getSqlConnection;
+let querySql = db.querySql;
 
 
 const app = express();
@@ -51,19 +51,24 @@ function getOneArticel(artId) {
     });
 }
 
+function addArticelRequest(id, days, startDay) {
+    let requestQuery = "INSERT INTO `articel_request` (`articel_id`, `days`, `start_date`) VALUES ('" + id + "', '" + days + "', '" + startDay + "')";
+    return querySql(requestQuery);
+}
+
 app.get('/articel/list', (req, res) => {
     Promise.resolve().then(function () {
         return getAllArticels();
     })
     .then(function (articels) {
-        res.status(200).json({ "code": 0, "message": "success", "articels": articels});
+        res.status(200).json({"message": "success", "articels": articels});
     })
     .catch(function (err) {
         console.error("got error: " + err);
         if (err instanceof Error) {
             res.status(400).send("General error");
         } else {
-            res.status(200).json({ "code": 1000, "message": err });
+            res.status(200).json({"message": err });
         }
     });
 });
@@ -74,16 +79,41 @@ app.get('/articel/:id', (req, res) => {
         return getOneArticel(id);
     })
     .then(function (articels) {
-        res.status(200).json({ "code": 0, "message": "success", "articel": articels});
+        res.status(200).json({"message": "success", "articel": articels});
     })
     .catch(function (err) {
         console.error("got error: " + err);
         if (err instanceof Error) {
             res.status(400).send("General error");
         } else {
-            res.status(200).json({ "code": 1000, "message": err });
+            res.status(200).json({"message": err });
         }
     });
+});
+
+
+app.post('/articel/request/:id', (req, res) => {
+    const id = req.params.id;
+    const days = req.body.days;
+    const startDay = req.body.startDay;
+
+    if (id && days && startDay) {
+        Promise.resolve().then(() => {
+            return addArticelRequest(id, days, startDay);
+        }).then(function () {
+            res.status(200).json({"message": "success"});
+        })
+        .catch(function (err) {
+            console.error("got error: " + err);
+            if (err instanceof Error) {
+                res.status(400).send("General error");
+            } else {
+                res.status(200).json({"message": err });
+            }
+        });
+    } else {
+        res.status(400).json({"message": "Missing parameter"});
+    }
 });
 
 app.listen(port, () => {

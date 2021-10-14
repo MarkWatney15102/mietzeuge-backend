@@ -51,8 +51,8 @@ function getOneArticel(artId) {
     });
 }
 
-function addArticelRequest(id, days, startDay) {
-    let requestQuery = "INSERT INTO `articel_request` (`articel_id`, `days`, `start_date`) VALUES ('" + id + "', '" + days + "', '" + startDay + "')";
+function addArticelRequest(id, days, startDay, pricePerDay, deposit, additionalCost) {
+    let requestQuery = "INSERT INTO `articel_request` (`articel_id`, `days`, `start_date`, `cost_per_day`, `deposit`, `additional_cost`) VALUES ('" + id + "', '" + days + "', '" + startDay + "', '" + pricePerDay + "', '" + deposit + "' ,'" + additionalCost + "')";
     return querySql(requestQuery);
 }
 
@@ -96,10 +96,13 @@ app.post('/articel/request/:id', (req, res) => {
     const id = req.params.id;
     const days = req.body.days;
     const startDay = req.body.startDay;
+    const pricePerDay = req.body.pricePerDay;
+    const deposit = req.body.deposit;
+    const additionalCost = req.body.additionalCost;
 
-    if (id && days && startDay) {
+    if (id && days && startDay && pricePerDay && deposit && additionalCost) {
         Promise.resolve().then(() => {
-            return addArticelRequest(id, days, startDay);
+            return addArticelRequest(id, days, startDay, pricePerDay, deposit, additionalCost);
         }).then(function () {
             res.status(200).json({"message": "success"});
         })

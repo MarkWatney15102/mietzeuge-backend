@@ -16,6 +16,7 @@
     "express": "^4.17.1",
     "github-api": "^3.4.0",
     "mysql": "^2.18.1",
+    "mysql2": "^2.3.1",
     "randomstring": "^1.2.1",
     "sqlstring": "^2.3.2"
   }

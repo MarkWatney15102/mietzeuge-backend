@@ -10,6 +10,8 @@ let getSqlConnection = db.getSqlConnection;
 let querySql = db.querySql;
 
 
+const { fetchUserTokenFormDatabase } = require('./lib/user');
+
 const app = express();
 const port = 43921;
 
@@ -18,12 +20,13 @@ app.use(express.json());
 
 function getAllArticels() {
     let articelQuery =
-     "SELECT art.ID, art.title, art.description, cat.text_de category, art.timestamp, art.last_changed, " + 
+     "SELECT art.ID, art.title, art.description, cat.text_de category, art.timestamp, art.last_changed, art.user_id, " + 
      "artImg.image_path, artPrice.cost_per_day, artPrice.deposit, artPrice.additional_cost " +
      "FROM articel art " +
      "INNER JOIN articel_images artImg ON art.ID = artImg.articel_id " +
      "INNER JOIN articel_prices artPrice ON art.ID = artPrice.articel_id " +
-     "INNER JOIN cat_categories cat ON art.category_id = cat.id ";
+     "INNER JOIN cat_categories cat ON art.category_id = cat.id " +
+     "WHERE art.active = '1'";
     return querySql(articelQuery)
        .then(function(rows){
         if (rows.length == 0) {
@@ -37,13 +40,13 @@ function getAllArticels() {
 
 function getOneArticel(artId) {
     let articelQuery =
-     "SELECT art.ID, art.title, art.description, cat.text_de category, art.timestamp, art.last_changed, " + 
+     "SELECT art.ID, art.title, art.description, cat.text_de category, art.timestamp, art.last_changed, art.user_id, " + 
      "artImg.image_path, artPrice.cost_per_day, artPrice.deposit, artPrice.additional_cost " +
      "FROM articel art " +
      "INNER JOIN articel_images artImg ON art.ID = artImg.articel_id " +
      "INNER JOIN articel_prices artPrice ON art.ID = artPrice.articel_id " +
      "INNER JOIN cat_categories cat ON art.category_id = cat.id " +
-     "WHERE art.ID = '" + artId + "'";
+     "WHERE art.ID = '" + artId + "' AND art.active = '1'";
     return querySql(articelQuery)
        .then(function(rows){
         if (rows.length == 0) {
@@ -76,6 +79,39 @@ function selectUserData(username) {
 function createToken(token, userId) {
     const sql = "INSERT INTO user_token (user_id, token) VALUES ('" + userId + "', '" + token + "') ON DUPLICATE KEY UPDATE token = '" + token + "'";
     return querySql(sql);
+}
+
+function fetchUserData(userId) {
+    const sql = "SELECT * FROM user WHERE id = " + SqlString.escape(userId) + "";
+    return querySql(sql)
+       .then(function(rows){
+        if (rows.length == 0) {
+            return Promise.reject("No user found");
+        }
+  
+        let userData = rows[0];
+        return userData;
+    }); 
+}
+
+function fetchUserArticel(userId) {
+    let articelQuery =
+     "SELECT art.ID, art.title, art.description, cat.text_de category, art.timestamp, art.last_changed, art.user_id, " + 
+     "artImg.image_path, artPrice.cost_per_day, artPrice.deposit, artPrice.additional_cost " +
+     "FROM articel art " +
+     "INNER JOIN articel_images artImg ON art.ID = artImg.articel_id " +
+     "INNER JOIN articel_prices artPrice ON art.ID = artPrice.articel_id " +
+     "INNER JOIN cat_categories cat ON art.category_id = cat.id " +
+     "WHERE art.user_id = " + SqlString.escape(userId) + " AND art.active = '1'";
+    return querySql(articelQuery)
+       .then(function(rows){
+        if (rows.length == 0) {
+            return Promise.reject("No articel found");
+        }
+  
+        let articels = rows;
+        return articels;
+    });
 }
 
 app.get('/articel/list', (req, res) => {
@@ -162,7 +198,7 @@ app.post('/auth/login', (req, res) => {
 
             res.status(200).send({
                 auth: verify,
-                message: "request was successfull",
+                message: "request was successfullly",
                 uid: (verify === true) ? userId : '',
                 token: (verify === true) ? token : ''
             });
@@ -175,9 +211,71 @@ app.post('/auth/login', (req, res) => {
             }
         });
     } else {
-        res.status(200).send({
+        res.status(400).send({
             auth: false,
-            message: "missing param"
+            message: "Missing param"
+        });
+    }
+});
+
+app.post('/user/profile', (req, res) => {
+    const { userId, token } = req.body;
+
+    if (userId && token) {
+        fetchUserTokenFormDatabase(SqlString.escape(userId)).then((userTokenDatabase) => {
+            if (userTokenDatabase === token) {
+                Promise.resolve().then(() => {
+                    return fetchUserData(userId);
+                }).then((userData) => {
+                    res.status(200).send({
+                        message: "success",
+                        userData: userData
+                    });
+                }).catch((err) => {
+                    console.error("got error: " + err);
+                    if (err instanceof Error) {
+                        res.status(400).send("General error");
+                    } else {
+                        res.status(200).json({"message": err });
+                    }
+                });
+            } else {
+                res.status(400).send({
+                    message: "Invalid session"
+                });
+            }
+        });
+    } else {
+        res.status(400).send({
+            message: "Missing param"
+        });
+    }
+});
+
+app.post('/user/profile/articel', (req, res) => {
+    const { userId, token } = req.body;
+
+    if (userId && token) {
+        fetchUserTokenFormDatabase(SqlString.escape(userId)).then((userTokenDatabase) => {
+            if (userTokenDatabase === token) {
+                Promise.resolve().then(() => {
+                    return fetchUserArticel(userId);
+                }).then((data) => {
+                    
+                    res.status(200).send({
+                        message: "success",
+                        articel: data
+                    });
+                });
+            } else {
+                res.status(400).send({
+                    message: "Invalid session"
+                });
+            }
+        });
+    } else {
+        res.status(400).send({
+            message: "Missing param"
         });
     }
 });
